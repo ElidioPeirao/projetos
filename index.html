@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Projetos Mecânicos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #171717; /* neutral-900 */
+            background-image: radial-gradient(circle at top, rgba(10, 50, 80, 0.3), transparent 50%), radial-gradient(circle at bottom right, rgba(120, 40, 20, 0.2), transparent 60%);
+            font-family: sans-serif;
+            color: #e5e5e5; /* neutral-200 */
+        }
+        .glass-bg {
+            background-color: rgba(23, 23, 23, 0.6); /* neutral-900/60 */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(64, 64, 64, 0.5); /* neutral-700/50 */
+        }
+        .glass-bg-light {
+            background-color: rgba(38, 38, 38, 0.5); /* neutral-800/50 */
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(64, 64, 64, 0.5); /* neutral-700/50 */
+        }
+        .form-input {
+            margin-top: 0.25rem;
+            display: block;
+            width: 100%;
+            background-color: #262626; /* neutral-800 */
+            border: 1px solid #525252; /* neutral-600 */
+            border-radius: 0.375rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            color: #e5e5e5; /* neutral-200 */
+            padding: 0.5rem 0.75rem;
+        }
+        .form-input:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 2px #f97316; /* ring-orange-500 */
+            border-color: #f97316; /* border-orange-500 */
+        }
+        /* Custom scrollbars */
+        .kanban-board::-webkit-scrollbar,
+        .modal-scroll::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .kanban-board::-webkit-scrollbar-track,
+        .modal-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .kanban-board::-webkit-scrollbar-thumb,
+        .modal-scroll::-webkit-scrollbar-thumb {
+            background: rgba(82, 82, 82, 0.7); /* neutral-500/70 */
+            border-radius: 10px;
+        }
+        .kanban-board::-webkit-scrollbar-thumb:hover,
+        .modal-scroll::-webkit-scrollbar-thumb:hover {
+            background: #fdba74; /* orange-300 */
+        }
+        /* Calendar specific styles */
+        .calendar-day-due {
+            background-color: rgba(249, 115, 22, 0.3); /* bg-orange-500/30 */
+            border: 1px solid rgba(251, 146, 60, 0.5); /* border-orange-400/50 */
+            color: #fef3c7; /* yellow-100 */
+        }
+        .calendar-day-today {
+            background-color: rgba(64, 64, 64, 0.5); /* bg-neutral-700/50 */
+            font-weight: bold;
+        }
+        .report-pinned, .attachment-pinned {
+            background-color: rgba(249, 115, 22, 0.1);
+            border-left-color: #f97316;
+        }
+    </style>
+</head>
+<body class="selection:bg-orange-500 selection:text-black">
+
+    <!-- Cabeçalho -->
+    <header id="main-header" class="bg-black/30 backdrop-blur-md sticky top-0 z-30 border-b border-neutral-700/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div>
+                    <img src="https://i.imgur.com/n2v520s.png" alt="Logotipo" class="h-12">
+                </div>
+                <button id="add-project-btn" class="flex items-center justify-center bg-orange-500 text-black px-4 py-2 rounded-lg shadow-lg shadow-orange-500/20 hover:bg-orange-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-opacity-50 font-semibold">
+                    <i data-lucide="plus" class="w-5 h-5 mr-2"></i>
+                    <span>Novo Projeto</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="p-4 sm:p-6 lg:p-8">
+        <!-- Tela de Carregamento -->
+        <div id="loading-view" class="flex items-center justify-center h-screen fixed inset-0">
+            <div class="text-center">
+                <div role="status">
+                    <svg aria-hidden="true" class="inline w-10 h-10 text-neutral-600 animate-spin fill-orange-500" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
+                        <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0492C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/>
+                    </svg>
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <div class="text-xl font-semibold text-neutral-300 mt-4">Conectando ao servidor...</div>
+            </div>
+        </div>
+
+        <!-- Visão de Grade de Projetos -->
+        <div id="project-grid-view"></div>
+
+        <!-- Visão de Detalhe do Projeto -->
+        <div id="project-detail-view" class="hidden"></div>
+    </main>
+
+    <!-- Modal -->
+    <div id="modal-container" class="hidden fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
+        <div id="modal-content" class="glass-bg rounded-xl shadow-2xl w-full max-w-lg">
+            <!-- O conteúdo do modal será injetado aqui -->
+        </div>
+    </div>
+
+    <!-- Firebase e Lógica da Aplicação -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+
+        // --- Configuração do Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCim3wMF-mVQoYcOJKRlGfAYP5RKEIDxzo",
+            authDomain: "gerenciadordeprojetos-954f5.firebaseapp.com",
+            projectId: "gerenciadordeprojetos-954f5",
+            storageBucket: "gerenciadordeprojetos-954f5.firebasestorage.app",
+            messagingSenderId: "505990593713",
+            appId: "1:505990593713:web:2d83b127d2076995dbb690",
+            measurementId: "G-78PVPD6MHH"
+        };
+        
+        // Inicializa o Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const analytics = getAnalytics(app);
+        const appId = firebaseConfig.appId;
+        const projectsCollectionPath = `/artifacts/${appId}/public/data/projects`;
+
+        // --- Estado Global da Aplicação ---
+        let state = {
+            userId: null,
+            projects: [],
+            isLoading: true,
+            selectedProjectId: null,
+            activeTabId: 'dashboard',
+            calendarDate: new Date(), // Date object for the calendar view
+            unsubscribe: null, 
+        };
+
+        // --- Funções Auxiliares ---
+        const toKebabCase = (str) => str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
+
+        function getTaskStatusColor(status) {
+            switch (status) {
+                case 'Em Andamento':
+                    return 'border-l-4 border-orange-500';
+                case 'Concluído':
+                    return 'border-l-4 border-green-500';
+                case 'A Fazer':
+                default:
+                    return 'border-l-4 border-neutral-500';
+            }
+        }
+
+        // --- Funções de Renderização ---
+        function render() {
+            const { isLoading, projects, selectedProjectId } = state;
+            const loadingView = document.getElementById('loading-view');
+            const gridView = document.getElementById('project-grid-view');
+            const detailView = document.getElementById('project-detail-view');
+
+            if (isLoading) {
+                loadingView.classList.remove('hidden');
+                gridView.classList.add('hidden');
+                detailView.classList.add('hidden');
+            } else {
+                loadingView.classList.add('hidden');
+                const selectedProject = projects.find(p => p.id === selectedProjectId);
+                if (selectedProject) {
+                    gridView.classList.add('hidden');
+                    detailView.classList.remove('hidden');
+                    renderProjectDetail(selectedProject);
+                } else {
+                    detailView.classList.add('hidden');
+                    gridView.classList.remove('hidden');
+                    renderProjectGrid(projects);
+                }
+            }
+            lucide.createIcons();
+        }
+        
+        function renderProjectGrid(projects) {
+            const gridView = document.getElementById('project-grid-view');
+            if (projects.length === 0) {
+                gridView.innerHTML = `
+                    <div class="text-center py-24">
+                        <i data-lucide="folder-search" class="w-24 h-24 mx-auto text-neutral-600 mb-4"></i>
+                        <h2 class="text-3xl font-bold text-neutral-300 mb-3">Nenhum projeto encontrado.</h2>
+                        <p class="text-neutral-400 mb-8">Comece sua jornada de produtividade criando seu primeiro projeto.</p>
+                        <button data-action="add-project" class="flex items-center mx-auto bg-orange-500 text-black px-6 py-3 rounded-lg shadow-lg shadow-orange-500/30 hover:bg-orange-400 transition-transform hover:scale-105 font-semibold">
+                            <i data-lucide="plus" class="w-5 h-5 mr-2"></i>
+                            Criar Primeiro Projeto
+                        </button>
+                    </div>`;
+            } else {
+                gridView.innerHTML = `
+                    <h2 class="text-3xl font-bold text-neutral-200 mb-6">Dashboard de Projetos</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${projects.map(renderProjectCard).join('')}
+                    </div>`;
+            }
+        }
+
+        function renderProjectCard(project) {
+            const { name, status, stages = [], client, totalBudget = 0 } = project;
+            const totalTasks = (stages || []).reduce((acc, stage) => acc + (stage.tasks?.length || 0), 0);
+            const completedTasks = (stages || []).reduce((acc, stage) => acc + (stage.tasks?.filter(t => t.status === 'Concluído').length || 0), 0);
+            const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            const valorGasto = (project.budget?.items || []).reduce((sum, item) => sum + parseFloat(item.cost || 0), 0);
+            
+            const statusStyles = {
+                'Não Iniciado': 'bg-neutral-700 text-neutral-300',
+                'Em Andamento': 'bg-orange-900/50 text-orange-300',
+                'Concluído': 'bg-green-900/50 text-green-300',
+                'Atrasado': 'bg-red-900/50 text-red-300',
+            };
+            const statusChip = `<span class="px-2 py-1 text-xs font-semibold rounded-full ${statusStyles[status] || statusStyles['Não Iniciado']}">${status}</span>`;
+
+            return `
+                <div data-action="select-project" data-project-id="${project.id}" class="glass-bg-light rounded-xl p-6 cursor-pointer hover:border-orange-400/70 hover:bg-neutral-800/80 transition-all duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="text-lg font-bold text-neutral-100 group-hover:text-orange-400 transition-colors">${name}</h3>
+                            ${statusChip}
+                        </div>
+                        <p class="text-sm text-neutral-400 mb-4 flex items-center"><i data-lucide="user" class="w-4 h-4 mr-2 text-neutral-500"></i>${client?.name || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1 text-sm text-neutral-300">
+                            <span>Progresso</span>
+                            <span class="font-semibold">${progress}%</span>
+                        </div>
+                        <div class="w-full bg-neutral-700 rounded-full h-2 mb-4">
+                            <div class="bg-orange-500 h-2 rounded-full transition-all duration-500" style="width: ${progress}%;"></div>
+                        </div>
+                        <div class="pt-3 border-t border-neutral-700/50 space-y-1 text-sm">
+                            <div class="flex justify-between text-neutral-400">
+                                <span>Gasto:</span>
+                                <span class="font-semibold text-neutral-200">R$ ${valorGasto.toFixed(2)}</span>
+                            </div>
+                            <div class="flex justify-between text-neutral-400">
+                                <span>Orçamento:</span>
+                                <span class="font-semibold text-neutral-200">R$ ${Number(totalBudget).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+        
+        function renderProjectDetail(project) {
+            const detailView = document.getElementById('project-detail-view');
+            detailView.innerHTML = `
+                <div class="glass-bg rounded-xl p-6 sm:p-8">
+                    <div class="flex justify-between items-start mb-6 border-b border-neutral-700 pb-4">
+                        <div>
+                            <button data-action="go-back" class="text-sm text-orange-400 hover:text-orange-300 mb-2 flex items-center"><i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i> Voltar</button>
+                            <h2 class="text-3xl font-bold text-neutral-100">${project.name}</h2>
+                            <p class="text-neutral-400">Cliente: ${project.client?.name || 'N/A'}</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button data-action="edit-project" data-project-id="${project.id}" class="p-2 text-neutral-400 hover:bg-neutral-700 hover:text-white rounded-full transition-colors"><i data-lucide="edit" class="w-5 h-5"></i></button>
+                            <button data-action="delete-project" data-project-id="${project.id}" class="p-2 text-neutral-400 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-colors"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>
+                    <div id="project-tabs-container"></div>
+                    <div id="project-tab-content"></div>
+                </div>`;
+            renderTabs(project, state.activeTabId);
+        }
+
+        function renderTabs(project, activeTabId) {
+            const tabs = [
+                { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
+                { id: 'tasks', label: 'Quadro Kanban', icon: 'Trello' },
+                { id: 'budget', label: 'Orçamento', icon: 'DollarSign' },
+                { id: 'calendar', label: 'Calendário', icon: 'Calendar' },
+                { id: 'reports', label: 'Relatórios', icon: 'FileText' },
+                { id: 'attachments', label: 'Anexos', icon: 'Paperclip' },
+                { id: 'client', label: 'Cliente', icon: 'User' },
+            ];
+            const tabsContainer = document.getElementById('project-tabs-container');
+            tabsContainer.innerHTML = `
+                <div class="flex border-b border-neutral-700 mb-6 overflow-x-auto">
+                    ${tabs.map(tab => `
+                        <button data-action="select-tab" data-tab-id="${tab.id}" class="flex-shrink-0 flex items-center space-x-2 px-4 py-2 text-sm font-medium transition-colors ${activeTabId === tab.id ? 'border-b-2 border-orange-400 text-orange-400' : 'text-neutral-400 hover:text-white'}">
+                            <i data-lucide="${toKebabCase(tab.icon)}" class="w-4 h-4"></i>
+                            <span>${tab.label}</span>
+                        </button>
+                    `).join('')}
+                </div>`;
+            renderTabContent(project, activeTabId);
+        }
+
+        function renderTabContent(project, activeTabId) {
+            const contentContainer = document.getElementById('project-tab-content');
+            switch (activeTabId) {
+                case 'dashboard': contentContainer.innerHTML = renderDashboard(project); break;
+                case 'tasks': contentContainer.innerHTML = renderKanbanBoard(project); break;
+                case 'budget': contentContainer.innerHTML = renderBudget(project); break;
+                case 'calendar': contentContainer.innerHTML = renderCalendar(project); break;
+                case 'reports': contentContainer.innerHTML = renderReports(project); break;
+                case 'attachments': contentContainer.innerHTML = renderAttachments(project); break;
+                case 'client': contentContainer.innerHTML = renderClientInfo(project); break;
+            }
+            lucide.createIcons();
+        }
+        
+        function renderDashboard(project) {
+            const { stages = [], endDate, collaborators = [] } = project;
+            const totalTasks = (stages || []).reduce((acc, stage) => acc + (stage.tasks?.length || 0), 0);
+            const completedTasks = (stages || []).reduce((acc, stage) => acc + (stage.tasks?.filter(t => t.status === 'Concluído').length || 0), 0);
+            const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            const pendingTasks = totalTasks - completedTasks;
+            const daysRemaining = endDate ? Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+
+            return `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1 glass-bg-light rounded-lg p-6 flex flex-col items-center justify-center">
+                        <div class="relative w-40 h-40">
+                            <svg class="w-full h-full" viewBox="0 0 36 36">
+                                <path class="text-neutral-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+                                <path class="text-orange-400" stroke="currentColor" stroke-width="3" stroke-dasharray="${progress}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-linecap="round"></path>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-4xl font-bold text-white">${progress}%</span>
+                            </div>
+                        </div>
+                        <h3 class="mt-4 text-xl font-semibold text-neutral-200">Progresso Geral</h3>
+                    </div>
+                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="glass-bg-light rounded-lg p-6">
+                            <h4 class="text-neutral-400 text-sm font-medium">Prazo Final</h4>
+                            <p class="text-3xl font-bold text-white">${daysRemaining !== null ? `${daysRemaining}` : 'N/D'}</p>
+                            <p class="text-neutral-400 text-sm">dias restantes</p>
+                        </div>
+                        <div class="glass-bg-light rounded-lg p-6">
+                            <h4 class="text-neutral-400 text-sm font-medium">Tarefas</h4>
+                            <p class="text-3xl font-bold text-white">${pendingTasks}</p>
+                            <p class="text-neutral-400 text-sm">pendentes de ${totalTasks}</p>
+                        </div>
+                        <div class="md:col-span-2 glass-bg-light rounded-lg p-6">
+                            <h4 class="text-neutral-400 text-sm font-medium mb-3 flex items-center"><i data-lucide="users" class="w-4 h-4 mr-2"></i>Colaboradores</h4>
+                            <div class="flex flex-wrap gap-2">
+                                ${(collaborators || []).length > 0 ? collaborators.map(c => `<span class="bg-neutral-700 text-neutral-200 px-3 py-1 rounded-full text-sm">${c}</span>`).join('') : '<p class="text-neutral-500 text-sm">Nenhum colaborador adicionado.</p>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderKanbanBoard(project) {
+            return `
+                <div class="flex space-x-4 overflow-x-auto pb-4 kanban-board">
+                    ${(project.stages || []).map(stage => `
+                        <div class="glass-bg-light rounded-lg p-3 w-80 flex-shrink-0 flex flex-col">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="text-md font-semibold text-neutral-200 flex items-center"><i data-lucide="flag" class="w-4 h-4 mr-2 text-orange-500"></i>${stage.name}</h3>
+                                ${stage.dueDate ? `<span class="text-xs text-neutral-400 flex items-center"><i data-lucide="calendar" class="w-3 h-3 mr-1.5"></i>${stage.dueDate}</span>` : ''}
+                            </div>
+                            <div class="space-y-3 mt-2 flex-grow">
+                                ${(stage.tasks || []).map(task => `
+                                    <div class="bg-neutral-800/70 p-3 rounded-md shadow-md ${getTaskStatusColor(task.status)}">
+                                        <p class="font-medium text-neutral-200 mb-2">${task.name}</p>
+                                        <div class="flex justify-between items-center text-xs text-neutral-400">
+                                            <span class="flex items-center"><i data-lucide="user" class="w-3 h-3 mr-1.5"></i>${task.responsible || 'N/D'}</span>
+                                            <span class="flex items-center"><i data-lucide="calendar" class="w-3 h-3 mr-1.5"></i>${task.dueDate || 'N/D'}</span>
+                                        </div>
+                                        <div class="mt-2 flex items-center justify-between">
+                                            <select data-action="update-task-status" data-stage-id="${stage.id}" data-task-id="${task.id}" class="text-xs bg-neutral-700 border-neutral-600 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 text-neutral-200 py-1 w-full">
+                                                <option ${task.status === 'A Fazer' ? 'selected' : ''}>A Fazer</option>
+                                                <option ${task.status === 'Em Andamento' ? 'selected' : ''}>Em Andamento</option>
+                                                <option ${task.status === 'Concluído' ? 'selected' : ''}>Concluído</option>
+                                            </select>
+                                            <button data-action="delete-task" data-stage-id="${stage.id}" data-task-id="${task.id}" class="ml-2 text-neutral-500 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                                ${(!stage.tasks || stage.tasks.length === 0) ? '<p class="text-neutral-500 text-xs text-center py-4">Nenhuma tarefa.</p>' : ''}
+                            </div>
+                            <button data-action="add-task" data-stage-id="${stage.id}" class="mt-3 w-full text-sm flex items-center justify-center text-neutral-400 hover:text-orange-400 hover:bg-neutral-700/50 p-2 rounded-md transition-colors">
+                                <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Adicionar Tarefa
+                            </button>
+                        </div>
+                    `).join('')}
+                    <div class="w-80 flex-shrink-0">
+                        <button data-action="add-stage" class="w-full text-center py-3 border-2 border-dashed border-neutral-700 rounded-lg text-neutral-500 hover:bg-neutral-700/50 hover:border-neutral-600 transition-colors">
+                            <i data-lucide="plus" class="w-5 h-5 inline mr-2"></i> Adicionar Nova Etapa
+                        </button>
+                    </div>
+                </div>`;
+        }
+        
+        function renderBudget(project) {
+            const { budget = { items: [] } } = project;
+            const totalCost = (budget.items || []).reduce((sum, item) => sum + parseFloat(item.cost || 0), 0);
+            return `
+                <div class="glass-bg-light rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-white">Controle de Custos</h3>
+                        <button data-action="add-budget-item" class="flex items-center justify-center bg-orange-500 text-black px-3 py-1.5 rounded-lg shadow-md shadow-orange-500/20 hover:bg-orange-400 transition-colors text-sm font-semibold">
+                            <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+                            Adicionar Custo
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-neutral-700">
+                                    <th class="p-2">Descrição</th>
+                                    <th class="p-2">Categoria</th>
+                                    <th class="p-2 text-right">Custo (R$)</th>
+                                    <th class="p-2 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(budget.items || []).map(item => `
+                                    <tr key="${item.id}" class="border-b border-neutral-800">
+                                        <td class="p-2">${item.description}</td>
+                                        <td class="p-2"><span class="bg-neutral-700 text-neutral-300 px-2 py-0.5 rounded-full text-xs">${item.category}</span></td>
+                                        <td class="p-2 text-right font-mono">${parseFloat(item.cost || 0).toFixed(2)}</td>
+                                        <td class="p-2 text-center">
+                                            <button data-action="delete-budget-item" data-item-id="${item.id}" class="text-neutral-500 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr class="border-t-2 border-neutral-700">
+                                    <td colspan="2" class="p-2 text-right font-bold text-lg">Total Gasto:</td>
+                                    <td class="p-2 text-right font-bold text-lg font-mono text-orange-400">R$ ${totalCost.toFixed(2)}</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        ${(!budget.items || budget.items.length === 0) ? '<p class="text-center text-neutral-500 py-6">Nenhum custo adicionado ainda.</p>' : ''}
+                    </div>
+                </div>`;
+        }
+
+        function renderCalendar(project) {
+            const date = state.calendarDate;
+            const year = date.getFullYear();
+            const month = date.getMonth();
+
+            const firstDayOfMonth = new Date(year, month, 1);
+            const lastDayOfMonth = new Date(year, month + 1, 0);
+            const daysInMonth = lastDayOfMonth.getDate();
+            const startDayOfWeek = firstDayOfMonth.getDay(); // 0 (Sun) - 6 (Sat)
+
+            const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+            // Collect tasks grouped by their due date
+            const tasksByDate = new Map();
+            (project.stages || []).forEach(stage => {
+                (stage.tasks || []).forEach(task => {
+                    if (task.dueDate) {
+                        if (!tasksByDate.has(task.dueDate)) {
+                            tasksByDate.set(task.dueDate, []);
+                        }
+                        tasksByDate.get(task.dueDate).push(task);
+                    }
+                });
+            });
+
+            let calendarHtml = `
+                <div class="glass-bg-light rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <button data-action="calendar-navigate" data-offset="-1" class="p-2 text-neutral-400 hover:bg-neutral-700 hover:text-white rounded-full transition-colors"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
+                        <h3 class="text-xl font-bold text-white">${monthNames[month]} ${year}</h3>
+                        <button data-action="calendar-navigate" data-offset="1" class="p-2 text-neutral-400 hover:bg-neutral-700 hover:text-white rounded-full transition-colors"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-2 text-center text-xs text-neutral-400 mb-2">
+                        ${dayNames.map(day => `<div>${day}</div>`).join('')}
+                    </div>
+                    <div class="grid grid-cols-7 gap-2">
+            `;
+
+            for (let i = 0; i < startDayOfWeek; i++) {
+                calendarHtml += `<div></div>`;
+            }
+
+            const today = new Date();
+            const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const currentDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const tasksForDay = tasksByDate.get(currentDateString);
+                
+                let dayClasses = 'h-16 flex items-center justify-center rounded-lg transition-colors';
+                let dayContent = `${day}`;
+                
+                const isToday = currentDateString === todayString;
+                
+                if (isToday) dayClasses += ' calendar-day-today';
+                
+                if (tasksForDay) {
+                    dayClasses += ' calendar-day-due relative group';
+                    const tooltipContent = tasksForDay.map(task => `
+                        <div class="text-left">
+                            <p class="font-bold">${task.name}</p>
+                            <p class="text-xs text-neutral-300">Responsável: ${task.responsible || 'N/D'}</p>
+                        </div>
+                    `).join('<hr class="border-neutral-600 my-1 mx-[-12px] w-auto">'); // Separator for multiple tasks
+                    
+                    dayContent += `
+                        <div class="absolute bottom-full mb-2 w-max max-w-xs p-3 rounded-lg shadow-lg text-sm z-20 
+                                   glass-bg left-1/2 -translate-x-1/2
+                                   opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <div class="font-bold mb-2 text-orange-300">Tarefas do Dia</div>
+                            ${tooltipContent}
+                        </div>
+                    `;
+                } else if (!isToday) {
+                    dayClasses += ' hover:bg-neutral-700/50';
+                }
+
+                calendarHtml += `<div class="${dayClasses}">${dayContent}</div>`;
+            }
+
+            calendarHtml += `</div></div>`;
+            return calendarHtml;
+        }
+
+        function renderReports(project) {
+            const reports = project.reports || [];
+            const pinnedReports = reports.filter(r => r.pinned);
+            const unpinnedReports = reports.filter(r => !r.pinned);
+
+            const renderReportItem = (report) => `
+                <div class="flex items-center justify-between p-3 border-b border-l-4 border-neutral-800 hover:bg-neutral-800/50 transition-colors ${report.pinned ? 'report-pinned' : 'border-transparent'}">
+                    <div class="flex items-center">
+                        ${report.pinned ? '<i data-lucide="pin" class="w-4 h-4 text-orange-400 mr-3"></i>' : ''}
+                        <div>
+                            <p class="font-medium text-neutral-200">Responsável: ${report.responsible}</p>
+                            <a href="${report.link}" target="_blank" class="text-xs text-neutral-400 hover:text-orange-400 transition-colors truncate max-w-xs sm:max-w-md">${report.link}</a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <a href="${report.link}" target="_blank" class="p-2 text-neutral-400 hover:bg-neutral-700 hover:text-white rounded-full transition-colors"><i data-lucide="eye" class="w-5 h-5"></i></a>
+                        <button data-action="toggle-pin-report" data-report-id="${report.id}" class="p-2 text-neutral-400 hover:bg-neutral-700 hover:text-white rounded-full transition-colors"><i data-lucide="pin" class="w-5 h-5"></i></button>
+                        <button data-action="delete-report" data-report-id="${report.id}" class="p-2 text-neutral-400 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-colors"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                    </div>
+                </div>
+            `;
+
+            return `
+                <div class="glass-bg-light rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-white">Relatórios do Projeto</h3>
+                        <button data-action="add-report" class="flex items-center justify-center bg-orange-500 text-black px-3 py-1.5 rounded-lg shadow-md shadow-orange-500/20 hover:bg-orange-400 transition-colors text-sm font-semibold">
+                            <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+                            Adicionar Relatório
+                        </button>
+                    </div>
+                    <div class="space-y-2">
+                        ${pinnedReports.length > 0 ? pinnedReports.map(renderReportItem).join('') : ''}
+                        ${unpinnedReports.length > 0 ? unpinnedReports.map(renderReportItem).join('') : ''}
+                        ${reports.length === 0 ? '<p class="text-center text-neutral-500 py-6">Nenhum relatório adicionado ainda.</p>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAttachments(project) {
+            const attachments = project.attachments || [];
+            const pinnedAttachments = attachments.filter(a => a.pinned);
+            const unpinnedAttachments = attachments.filter(a => !a.pinned);
+
+            const renderAttachmentItem = (attachment) => `
+                <div class="flex items-center justify-between p-3 border-b border-l-4 border-neutral-800 hover:bg-neutral-800/50 transition-colors ${attachment.pinned ? 'attachment-pinned' : 'border-transparent'}">
+                    <div class="flex items-center">
+                        ${attachment.pinned ? '<i data-lucide="pin" class="w-4 h-4 text-orange-400 mr-3"></i>' : ''}
+                        <div>
+                            <p class="font-medium text-neutral-200">${attachment.name}</p>
+                            <a href="${attachment.link}" target="_blank" class="text-xs text-neutral-400 hover:text-orange-400 transition-colors truncate max-w-xs sm:max-w-md">${attachment.link}</a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <a href="${attachment.link}" target="_blank" class="p-2 text-neutral-400 hover:bg-neutral-700 hover:text-white rounded-full transition-colors"><i data-lucide="external-link" class="w-5 h-5"></i></a>
+                        <button data-action="toggle-pin-attachment" data-attachment-id="${attachment.id}" class="p-2 text-neutral-400 hover:bg-neutral-700 hover:text-white rounded-full transition-colors"><i data-lucide="pin" class="w-5 h-5"></i></button>
+                        <button data-action="delete-attachment" data-attachment-id="${attachment.id}" class="p-2 text-neutral-400 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-colors"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                    </div>
+                </div>
+            `;
+
+            return `
+                <div class="glass-bg-light rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-white">Anexos do Projeto</h3>
+                        <button data-action="add-attachment" class="flex items-center justify-center bg-orange-500 text-black px-3 py-1.5 rounded-lg shadow-md shadow-orange-500/20 hover:bg-orange-400 transition-colors text-sm font-semibold">
+                            <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+                            Adicionar Anexo
+                        </button>
+                    </div>
+                    <div class="space-y-2">
+                        ${pinnedAttachments.length > 0 ? pinnedAttachments.map(renderAttachmentItem).join('') : ''}
+                        ${unpinnedAttachments.length > 0 ? unpinnedAttachments.map(renderAttachmentItem).join('') : ''}
+                        ${attachments.length === 0 ? '<p class="text-center text-neutral-500 py-6">Nenhum anexo adicionado ainda.</p>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderClientInfo(project) {
+            const { client } = project;
+            return `
+                <div class="glass-bg-light rounded-lg p-6">
+                    <h3 class="text-xl font-bold text-white mb-4">Informações do Cliente</h3>
+                    <div class="space-y-3">
+                        <p><strong class="text-neutral-400 font-medium w-24 inline-block">Nome:</strong> ${client?.name || 'Não informado'}</p>
+                        <p><strong class="text-neutral-400 font-medium w-24 inline-block">Contato:</strong> ${client?.contact || 'Não informado'}</p>
+                        <div>
+                            <strong class="text-neutral-400 font-medium block mb-1">Observações:</strong>
+                            <p class="text-neutral-300 whitespace-pre-wrap">${client?.notes || 'Nenhuma.'}</p>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // --- Funções de Modal ---
+        
+        function openModal(type, data = {}) {
+            const modalContainer = document.getElementById('modal-container');
+            const modalContent = document.getElementById('modal-content');
+            let formHTML = '';
+
+            const project = data.projectId ? state.projects.find(p => p.id === data.projectId) : data;
+
+            switch (type) {
+                case 'project': formHTML = getProjectFormHTML(project); break;
+                case 'stage': formHTML = getStageFormHTML(project); break;
+                case 'task': formHTML = getTaskFormHTML(project, data.stageId); break;
+                case 'budgetItem': formHTML = getBudgetFormHTML(project); break;
+                case 'report': formHTML = getReportFormHTML(project); break;
+                case 'attachment': formHTML = getAttachmentFormHTML(project); break;
+                case 'confirmDelete': formHTML = getConfirmDeleteHTML(data); break;
+            }
+            
+            modalContent.innerHTML = formHTML;
+            modalContainer.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('modal-container').classList.add('hidden');
+            document.getElementById('modal-content').innerHTML = '';
+        }
+
+        function getProjectFormHTML(project = {}) {
+            const isEditing = !!project.id;
+            return `
+                <form id="project-form" data-project-id="${project.id || ''}" class="p-6">
+                    <button type="button" data-action="close-modal" class="absolute top-4 right-4 text-neutral-500 hover:text-neutral-300"><i data-lucide="x" class="w-6 h-6"></i></button>
+                    <h3 class="text-xl font-bold mb-6 text-neutral-100">${isEditing ? 'Editar Projeto' : 'Novo Projeto'}</h3>
+                    <div class="space-y-4 max-h-[70vh] overflow-y-auto pr-2 modal-scroll">
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Nome do Projeto</label><input name="name" value="${project.name || ''}" class="form-input" required></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-neutral-300 mb-1">Data de Início</label><input name="startDate" value="${project.startDate || new Date().toISOString().split('T')[0]}" type="date" class="form-input"></div>
+                            <div><label class="block text-sm font-medium text-neutral-300 mb-1">Data de Entrega</label><input name="endDate" value="${project.endDate || ''}" type="date" class="form-input"></div>
+                        </div>
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Status</label>
+                            <select name="status" class="form-input">
+                                <option ${project.status === 'Não Iniciado' ? 'selected' : ''}>Não Iniciado</option>
+                                <option ${project.status === 'Em Andamento' ? 'selected' : ''}>Em Andamento</option>
+                                <option ${project.status === 'Concluído' ? 'selected' : ''}>Concluído</option>
+                                <option ${project.status === 'Atrasado' ? 'selected' : ''}>Atrasado</option>
+                            </select>
+                        </div>
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Colaboradores (separados por vírgula)</label><input name="collaborators" value="${(project.collaborators || []).join(', ')}" class="form-input"></div>
+                        
+                        <h4 class="text-lg font-semibold pt-4 border-t border-neutral-700 text-neutral-200">Orçamento</h4>
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Orçamento Total (R$)</label><input name="totalBudget" value="${project.totalBudget || ''}" type="number" step="0.01" class="form-input" placeholder="5000.00"></div>
+
+                        <h4 class="text-lg font-semibold pt-4 border-t border-neutral-700 text-neutral-200">Informações do Cliente</h4>
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Nome do Cliente</label><input name="clientName" value="${project.client?.name || ''}" class="form-input"></div>
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Contato</label><input name="clientContact" value="${project.client?.contact || ''}" class="form-input"></div>
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Observações</label><textarea name="clientNotes" rows="3" class="form-input">${project.client?.notes || ''}</textarea></div>
+                    </div>
+                    <div class="mt-8 flex justify-end space-x-3">
+                        <button type="button" data-action="close-modal" class="bg-neutral-700 text-neutral-200 px-4 py-2 rounded-lg hover:bg-neutral-600 font-semibold">Cancelar</button>
+                        <button type="submit" class="bg-orange-500 text-black px-4 py-2 rounded-lg hover:bg-orange-400 font-semibold">Salvar Projeto</button>
+                    </div>
+                </form>`;
+        }
+        
+        function getStageFormHTML(project) {
+             return `
+                <form id="stage-form" data-project-id="${project.id}" class="p-6">
+                    <button type="button" data-action="close-modal" class="absolute top-4 right-4 text-neutral-500 hover:text-neutral-300"><i data-lucide="x" class="w-6 h-6"></i></button>
+                    <h3 class="text-xl font-bold mb-6 text-neutral-100">Nova Etapa</h3>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Nome da Etapa</label><input name="name" class="form-input" required autofocus></div>
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Prazo da Etapa</label><input name="dueDate" type="date" class="form-input"></div>
+                    </div>
+                    <div class="mt-8 flex justify-end space-x-3">
+                        <button type="button" data-action="close-modal" class="bg-neutral-700 text-neutral-200 px-4 py-2 rounded-lg hover:bg-neutral-600 font-semibold">Cancelar</button>
+                        <button type="submit" class="bg-orange-500 text-black px-4 py-2 rounded-lg hover:bg-orange-400 font-semibold">Adicionar Etapa</button>
+                    </div>
+                </form>`;
+        }
+        
+        function getTaskFormHTML(project, stageId) {
+            return `
+                <form id="task-form" data-project-id="${project.id}" data-stage-id="${stageId}" class="p-6">
+                    <button type="button" data-action="close-modal" class="absolute top-4 right-4 text-neutral-500 hover:text-neutral-300"><i data-lucide="x" class="w-6 h-6"></i></button>
+                    <h3 class="text-xl font-bold mb-6 text-neutral-100">Nova Tarefa</h3>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Descrição</label><input name="name" class="form-input" required autofocus></div>
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Responsável</label><input name="responsible" class="form-input"></div>
+                        <div><label class="block text-sm font-medium text-neutral-300 mb-1">Data de Entrega</label><input name="dueDate" type="date" class="form-input"></div>
+                    </div>
+                    <div class="mt-8 flex justify-end space-x-3">
+                        <button type="button" data-action="close-modal" class="bg-neutral-700 text-neutral-200 px-4 py-2 rounded-lg hover:bg-neutral-600 font-semibold">Cancelar</button>
+                        <button type="submit" class="bg-orange-500 text-black px-4 py-2 rounded-lg hover:bg-orange-400 font-semibold">Adicionar Tarefa</button>
+                    </div>
+                </form>`;
+        }
+
+        function getBudgetFormHTML(project) {
+            return `
+                <form id="budget-form" data-project-id="${project.id}" class="p-6">
+                     <button type="button" data-action="close-modal" class="absolute top-4 right-4 text-neutral-500 hover:text-neutral-300"><i data-lucide="x" class="w-6 h-6"></i></button>
+                     <h3 class="text-xl font-bold mb-6 text-neutral-100">Adicionar Custo</h3>
+                     <div class="space-y-4">
+                         <div><label class="block text-sm font-medium text-neutral-300 mb-1">Descrição</label><input name="description" class="form-input" required autofocus></div>
+                         <div><label class="block text-sm font-medium text-neutral-300 mb-1">Categoria</label>
+                             <select name="category" class="form-input">
+                                 <option>Material</option><option>Mão de Obra</option><option>Serviços Terceirizados</option><option>Componentes</option><option>Despesas Gerais</option><option>Outros</option>
+                             </select>
+                         </div>
+                         <div><label class="block text-sm font-medium text-neutral-300 mb-1">Custo (R$)</label><input name="cost" type="number" step="0.01" class="form-input" required></div>
+                     </div>
+                     <div class="mt-8 flex justify-end space-x-3">
+                         <button type="button" data-action="close-modal" class="bg-neutral-700 text-neutral-200 px-4 py-2 rounded-lg hover:bg-neutral-600 font-semibold">Cancelar</button>
+                         <button type="submit" class="bg-orange-500 text-black px-4 py-2 rounded-lg hover:bg-orange-400 font-semibold">Adicionar Custo</button>
+                     </div>
+                </form>`;
+        }
+
+        function getReportFormHTML(project) {
+            return `
+                <form id="report-form" data-project-id="${project.id}" class="p-6">
+                     <button type="button" data-action="close-modal" class="absolute top-4 right-4 text-neutral-500 hover:text-neutral-300"><i data-lucide="x" class="w-6 h-6"></i></button>
+                     <h3 class="text-xl font-bold mb-6 text-neutral-100">Adicionar Relatório</h3>
+                     <div class="space-y-4">
+                         <div><label class="block text-sm font-medium text-neutral-300 mb-1">Responsável</label><input name="responsible" class="form-input" required autofocus></div>
+                         <div><label class="block text-sm font-medium text-neutral-300 mb-1">Link do Google Documentos</label><input name="link" type="url" class="form-input" required placeholder="https://docs.google.com/..."></div>
+                     </div>
+                     <div class="mt-8 flex justify-end space-x-3">
+                         <button type="button" data-action="close-modal" class="bg-neutral-700 text-neutral-200 px-4 py-2 rounded-lg hover:bg-neutral-600 font-semibold">Cancelar</button>
+                         <button type="submit" class="bg-orange-500 text-black px-4 py-2 rounded-lg hover:bg-orange-400 font-semibold">Adicionar Relatório</button>
+                     </div>
+                </form>`;
+        }
+
+        function getAttachmentFormHTML(project) {
+            return `
+                <form id="attachment-form" data-project-id="${project.id}" class="p-6">
+                     <button type="button" data-action="close-modal" class="absolute top-4 right-4 text-neutral-500 hover:text-neutral-300"><i data-lucide="x" class="w-6 h-6"></i></button>
+                     <h3 class="text-xl font-bold mb-6 text-neutral-100">Adicionar Anexo</h3>
+                     <div class="space-y-4">
+                         <div><label class="block text-sm font-medium text-neutral-300 mb-1">Nome do Anexo</label><input name="name" class="form-input" required autofocus></div>
+                         <div><label class="block text-sm font-medium text-neutral-300 mb-1">Link do Anexo</label><input name="link" type="url" class="form-input" required placeholder="https://..."></div>
+                     </div>
+                     <div class="mt-8 flex justify-end space-x-3">
+                         <button type="button" data-action="close-modal" class="bg-neutral-700 text-neutral-200 px-4 py-2 rounded-lg hover:bg-neutral-600 font-semibold">Cancelar</button>
+                         <button type="submit" class="bg-orange-500 text-black px-4 py-2 rounded-lg hover:bg-orange-400 font-semibold">Adicionar Anexo</button>
+                     </div>
+                </form>`;
+        }
+
+        function getConfirmDeleteHTML({ message, confirmAction, reportId, attachmentId }) {
+             return `
+                <div class="p-6">
+                    <h3 class="text-xl font-bold text-red-400 mb-4">Confirmação Necessária</h3>
+                    <p class="text-neutral-300 mb-6">${message}</p>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" data-action="close-modal" class="bg-neutral-700 text-neutral-200 px-4 py-2 rounded-lg hover:bg-neutral-600 font-semibold">Cancelar</button>
+                        <button type="button" data-action="${confirmAction}" 
+                                ${reportId ? `data-report-id="${reportId}"` : ''} 
+                                ${attachmentId ? `data-attachment-id="${attachmentId}"` : ''} 
+                                class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-500 font-semibold">Excluir</button>
+                    </div>
+                </div>`;
+        }
+
+        // --- Lógica de Manipulação de Dados ---
+        
+        async function handleProjectFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const projectId = form.dataset.projectId;
+            const project = state.projects.find(p => p.id === projectId) || {};
+            
+            const dataToSave = {
+                name: form.elements.name.value,
+                startDate: form.elements.startDate.value,
+                endDate: form.elements.endDate.value,
+                status: form.elements.status.value,
+                collaborators: form.elements.collaborators.value.split(',').map(c => c.trim()).filter(Boolean),
+                totalBudget: parseFloat(form.elements.totalBudget.value) || 0,
+                client: {
+                    name: form.elements.clientName.value,
+                    contact: form.elements.clientContact.value,
+                    notes: form.elements.clientNotes.value,
+                },
+                stages: project.stages || [],
+                budget: project.budget || { items: [] },
+                reports: project.reports || [],
+                attachments: project.attachments || [],
+            };
+            
+            if (projectId) {
+                await updateDoc(doc(db, projectsCollectionPath, projectId), dataToSave);
+            } else {
+                await addDoc(collection(db, projectsCollectionPath), dataToSave);
+            }
+            closeModal();
+        }
+        
+        async function handleStageFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const projectId = form.dataset.projectId;
+            const project = state.projects.find(p => p.id === projectId);
+            if (!project) return;
+            
+            const newStage = {
+                id: crypto.randomUUID(),
+                name: form.elements.name.value,
+                dueDate: form.elements.dueDate.value,
+                tasks: []
+            };
+            const updatedStages = [...(project.stages || []), newStage];
+            await updateDoc(doc(db, projectsCollectionPath, projectId), { stages: updatedStages });
+            closeModal();
+        }
+        
+        async function handleTaskFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const projectId = form.dataset.projectId;
+            const stageId = form.dataset.stageId;
+            const project = state.projects.find(p => p.id === projectId);
+            if (!project) return;
+            
+            const newTask = {
+                id: crypto.randomUUID(),
+                name: form.elements.name.value,
+                responsible: form.elements.responsible.value,
+                dueDate: form.elements.dueDate.value,
+                status: 'A Fazer'
+            };
+            
+            const updatedStages = (project.stages || []).map(stage => {
+                if (stage.id === stageId) {
+                    return { ...stage, tasks: [...(stage.tasks || []), newTask] };
+                }
+                return stage;
+            });
+            await updateDoc(doc(db, projectsCollectionPath, projectId), { stages: updatedStages });
+            closeModal();
+        }
+        
+        async function handleBudgetFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const projectId = form.dataset.projectId;
+            const project = state.projects.find(p => p.id === projectId);
+            if (!project) return;
+            
+            const newItem = {
+                id: crypto.randomUUID(),
+                description: form.elements.description.value,
+                category: form.elements.category.value,
+                cost: parseFloat(form.elements.cost.value)
+            };
+            
+            const updatedBudget = {
+                items: [...(project.budget?.items || []), newItem]
+            };
+            await updateDoc(doc(db, projectsCollectionPath, projectId), { budget: updatedBudget });
+            closeModal();
+        }
+
+        async function handleReportFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const projectId = form.dataset.projectId;
+            const project = state.projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            const newReport = {
+                id: crypto.randomUUID(),
+                responsible: form.elements.responsible.value,
+                link: form.elements.link.value,
+                pinned: false,
+            };
+
+            const updatedReports = [...(project.reports || []), newReport];
+            await updateDoc(doc(db, projectsCollectionPath, projectId), { reports: updatedReports });
+            closeModal();
+        }
+
+        async function handleAttachmentFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const projectId = form.dataset.projectId;
+            const project = state.projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            const newAttachment = {
+                id: crypto.randomUUID(),
+                name: form.elements.name.value,
+                link: form.elements.link.value,
+                pinned: false,
+            };
+
+            const updatedAttachments = [...(project.attachments || []), newAttachment];
+            await updateDoc(doc(db, projectsCollectionPath, projectId), { attachments: updatedAttachments });
+            closeModal();
+        }
+
+        // --- Inicialização e Event Listeners ---
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+
+            function initializeAndListen() {
+                if (state.unsubscribe) {
+                    state.unsubscribe();
+                }
+                
+                state.unsubscribe = onSnapshot(query(collection(db, projectsCollectionPath)), (snapshot) => {
+                    state.projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    state.isLoading = false;
+                    render();
+                }, (error) => {
+                    console.error("Error fetching projects:", error);
+                    const loadingView = document.getElementById('loading-view');
+                    loadingView.innerHTML = `<div class="text-xl font-semibold text-red-400">Error loading projects. Check Firestore security rules.</div>`;
+                    state.isLoading = false;
+                    render();
+                });
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    state.userId = user.uid;
+                    initializeAndListen();
+                } else {
+                    signInAnonymously(auth).catch((error) => {
+                        console.error("Anonymous sign-in failed:", error);
+                        const loadingView = document.getElementById('loading-view');
+                        loadingView.innerHTML = `<div class="text-xl font-semibold text-red-400">Authentication failed. Could not connect to the server.</div>`;
+                        state.isLoading = false;
+                        render();
+                    });
+                }
+            });
+
+            document.getElementById('add-project-btn').addEventListener('click', () => openModal('project'));
+
+            document.body.addEventListener('click', async (e) => {
+                const target = e.target.closest('[data-action]');
+                if (!target) return;
+
+                const action = target.dataset.action;
+                const projectId = target.dataset.projectId || state.selectedProjectId;
+                const project = state.projects.find(p => p.id === projectId);
+
+                switch(action) {
+                    case 'add-project': openModal('project'); break;
+                    case 'add-stage': openModal('stage', { projectId }); break;
+                    case 'add-task': openModal('task', { projectId, stageId: target.dataset.stageId }); break;
+                    case 'add-budget-item': openModal('budgetItem', { projectId }); break;
+                    case 'add-report': openModal('report', { projectId }); break;
+                    case 'add-attachment': openModal('attachment', { projectId }); break;
+                    case 'select-project': 
+                        state.selectedProjectId = target.dataset.projectId; 
+                        state.activeTabId = 'dashboard'; 
+                        state.calendarDate = new Date(); // Reset calendar to current month
+                        render(); 
+                        break;
+                    case 'go-back': 
+                        state.selectedProjectId = null; 
+                        render(); 
+                        break;
+                    case 'close-modal': closeModal(); break;
+                    case 'select-tab': 
+                        state.activeTabId = target.dataset.tabId;
+                        renderTabs(project, state.activeTabId);
+                        break;
+                    case 'calendar-navigate': {
+                        const offset = parseInt(target.dataset.offset, 10);
+                        const newDate = new Date(state.calendarDate);
+                        newDate.setMonth(newDate.getMonth() + offset);
+                        state.calendarDate = newDate;
+                        render();
+                        break;
+                    }
+                    case 'edit-project': openModal('project', project); break;
+                    case 'delete-project': 
+                        openModal('confirmDelete', { 
+                            message: 'Tem certeza que deseja excluir este projeto e todas as suas tarefas e custos associados? Esta ação não pode ser desfeita.',
+                            confirmAction: 'confirm-delete-project'
+                        });
+                        break;
+                    case 'confirm-delete-project':
+                        await deleteDoc(doc(db, projectsCollectionPath, projectId));
+                        state.selectedProjectId = null;
+                        closeModal();
+                        render();
+                        break;
+                    case 'delete-task': {
+                        const stageId = target.dataset.stageId;
+                        const taskId = target.dataset.taskId;
+                        const updatedStages = project.stages.map(stage => {
+                            if (stage.id === stageId) {
+                                return { ...stage, tasks: stage.tasks.filter(t => t.id !== taskId) };
+                            }
+                            return stage;
+                        });
+                        await updateDoc(doc(db, projectsCollectionPath, projectId), { stages: updatedStages });
+                        break;
+                    }
+                    case 'delete-budget-item': {
+                        const itemId = target.dataset.itemId;
+                        const updatedBudget = {
+                            items: project.budget.items.filter(item => item.id !== itemId)
+                        };
+                        await updateDoc(doc(db, projectsCollectionPath, projectId), { budget: updatedBudget });
+                        break;
+                    }
+                    case 'toggle-pin-report': {
+                        const reportId = target.dataset.reportId;
+                        const updatedReports = project.reports.map(r => {
+                            if (r.id === reportId) {
+                                return { ...r, pinned: !r.pinned };
+                            }
+                            return r;
+                        });
+                        await updateDoc(doc(db, projectsCollectionPath, projectId), { reports: updatedReports });
+                        break;
+                    }
+                    case 'delete-report': {
+                        const reportId = target.dataset.reportId;
+                        const reportToDelete = project.reports.find(r => r.id === reportId);
+                        openModal('confirmDelete', {
+                            message: `Tem certeza que deseja excluir o relatório de "${reportToDelete.responsible}"?`,
+                            confirmAction: 'confirm-delete-report',
+                            reportId: reportId
+                        });
+                        break;
+                    }
+                    case 'confirm-delete-report': {
+                        const reportId = target.dataset.reportId;
+                        const updatedReports = project.reports.filter(r => r.id !== reportId);
+                        await updateDoc(doc(db, projectsCollectionPath, projectId), { reports: updatedReports });
+                        closeModal();
+                        break;
+                    }
+                    case 'toggle-pin-attachment': {
+                        const attachmentId = target.dataset.attachmentId;
+                        const updatedAttachments = project.attachments.map(a => {
+                            if (a.id === attachmentId) {
+                                return { ...a, pinned: !a.pinned };
+                            }
+                            return a;
+                        });
+                        await updateDoc(doc(db, projectsCollectionPath, projectId), { attachments: updatedAttachments });
+                        break;
+                    }
+                    case 'delete-attachment': {
+                        const attachmentId = target.dataset.attachmentId;
+                        const attachmentToDelete = project.attachments.find(a => a.id === attachmentId);
+                        openModal('confirmDelete', {
+                            message: `Tem certeza que deseja excluir o anexo "${attachmentToDelete.name}"?`,
+                            confirmAction: 'confirm-delete-attachment',
+                            attachmentId: attachmentId
+                        });
+                        break;
+                    }
+                    case 'confirm-delete-attachment': {
+                        const attachmentId = target.dataset.attachmentId;
+                        const updatedAttachments = project.attachments.filter(a => a.id !== attachmentId);
+                        await updateDoc(doc(db, projectsCollectionPath, projectId), { attachments: updatedAttachments });
+                        closeModal();
+                        break;
+                    }
+                }
+            });
+
+            document.body.addEventListener('submit', (e) => {
+                e.preventDefault(); 
+                const formId = e.target.id;
+                switch(formId) {
+                    case 'project-form': handleProjectFormSubmit(e); break;
+                    case 'stage-form': handleStageFormSubmit(e); break;
+                    case 'task-form': handleTaskFormSubmit(e); break;
+                    case 'budget-form': handleBudgetFormSubmit(e); break;
+                    case 'report-form': handleReportFormSubmit(e); break;
+                    case 'attachment-form': handleAttachmentFormSubmit(e); break;
+                }
+            });
+
+            document.body.addEventListener('change', async (e) => {
+                const target = e.target.closest('[data-action="update-task-status"]');
+                if (!target) return;
+                
+                const projectId = state.selectedProjectId;
+                const stageId = target.dataset.stageId;
+                const taskId = target.dataset.taskId;
+                const newStatus = target.value;
+                const project = state.projects.find(p => p.id === projectId);
+
+                const updatedStages = project.stages.map(stage => {
+                    if (stage.id === stageId) {
+                        return { ...stage, tasks: stage.tasks.map(task => task.id === taskId ? { ...task, status: newStatus } : task) };
+                    }
+                    return stage;
+                });
+                await updateDoc(doc(db, projectsCollectionPath, projectId), { stages: updatedStages });
+            });
+        });
+    </script>
+</body>
+</html>
