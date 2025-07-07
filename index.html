@@ -744,6 +744,14 @@
                     <div class="space-y-4">
                         <div><label class="block text-sm font-medium text-neutral-300 mb-1">Nome da Etapa</label><input name="name" value="${stage.name || ''}" class="form-input" required autofocus></div>
                         <div><label class="block text-sm font-medium text-neutral-300 mb-1">Prazo da Etapa</label><input name="dueDate" value="${stage.dueDate || ''}" type="date" class="form-input"></div>
+                        <div>
+                            <label class="block text-sm font-medium text-neutral-300 mb-1">Status Padrão para Tarefas</label>
+                            <select name="status" class="form-input">
+                                <option value="A Fazer" ${stage.status === 'A Fazer' ? 'selected' : ''}>A Fazer</option>
+                                <option value="Em Andamento" ${stage.status === 'Em Andamento' ? 'selected' : ''}>Em Andamento</option>
+                                <option value="Concluído" ${stage.status === 'Concluído' ? 'selected' : ''}>Concluído</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="mt-8 flex justify-end space-x-3">
                         <button type="button" data-action="close-modal" class="bg-neutral-700 text-neutral-200 px-4 py-2 rounded-lg hover:bg-neutral-600 font-semibold">Cancelar</button>
@@ -890,6 +898,7 @@
                             ...stage,
                             name: form.elements.name.value,
                             dueDate: form.elements.dueDate.value,
+                            status: form.elements.status.value,
                         };
                     }
                     return stage;
@@ -900,6 +909,7 @@
                     id: crypto.randomUUID(),
                     name: form.elements.name.value,
                     dueDate: form.elements.dueDate.value,
+                    status: form.elements.status.value,
                     tasks: []
                 };
                 const updatedStages = [...(project.stages || []), newStage];
@@ -916,19 +926,22 @@
             const project = state.projects.find(p => p.id === projectId);
             if (!project) return;
             
+            const stage = project.stages.find(s => s.id === stageId);
+            const defaultStatus = stage?.status || 'A Fazer';
+
             const newTask = {
                 id: crypto.randomUUID(),
                 name: form.elements.name.value,
                 responsible: form.elements.responsible.value,
                 dueDate: form.elements.dueDate.value,
-                status: 'A Fazer'
+                status: defaultStatus
             };
             
-            const updatedStages = (project.stages || []).map(stage => {
-                if (stage.id === stageId) {
-                    return { ...stage, tasks: [...(stage.tasks || []), newTask] };
+            const updatedStages = (project.stages || []).map(s => {
+                if (s.id === stageId) {
+                    return { ...s, tasks: [...(s.tasks || []), newTask] };
                 }
-                return stage;
+                return s;
             });
             await updateDoc(doc(db, projectsCollectionPath, projectId), { stages: updatedStages });
             closeModal();
@@ -1276,9 +1289,12 @@
                         });
 
                         if (taskToMove) {
+                            const destinationStage = project.stages.find(s => s.id === destinationStageId);
+                            const newStatusForTask = destinationStage?.status || 'A Fazer';
+
                             const finalStages = stagesWithoutTask.map(stage => {
                                 if (stage.id === destinationStageId) {
-                                    const updatedTask = {...taskToMove, status: 'A Fazer'};
+                                    const updatedTask = {...taskToMove, status: newStatusForTask };
                                     return { ...stage, tasks: [...(stage.tasks || []), updatedTask] };
                                 }
                                 return stage;
